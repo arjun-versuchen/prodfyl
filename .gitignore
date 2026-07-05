@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+functions/node_modules/
+functions/lib/
+
+# Build
+dist/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Firebase
+.firebase/
+firebase-debug.log
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+*.log

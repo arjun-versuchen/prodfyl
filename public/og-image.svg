@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#09090b"/>
+  <rect x="80" y="80" width="1040" height="470" rx="32" fill="#18181f" stroke="#2a2a38"/>
+  <text x="120" y="220" fill="#818cf8" font-family="Inter, Arial, sans-serif" font-size="48" font-weight="700">InterviewMaster AI</text>
+  <text x="120" y="290" fill="#f4f4f5" font-family="Inter, Arial, sans-serif" font-size="32" font-weight="600">Premium Data Engineering Interview Platform</text>
+  <text x="120" y="360" fill="#71717a" font-family="Inter, Arial, sans-serif" font-size="24">SQL live now � PySpark, Spark, Azure, Databricks coming soon</text>
+</svg>
