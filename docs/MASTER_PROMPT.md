@@ -307,16 +307,36 @@ sql-interview-prep/
   lastLoginAt: Timestamp
   plan: 'free' | 'premium'
   subscription: {
-    status: 'active' | 'expired' | 'cancelled' | 'none'
-    razorpaySubscriptionId?: string
-    razorpayPlanId?: string
-    currentPeriodEnd?: Timestamp
+    status: 'active' | 'expired' | 'none'
+    razorpayPlanId?: 'monthly' | 'yearly'
+    razorpayOrderId?: string
+    razorpayPaymentId?: string       // latest successful payment
+    currentPeriodEnd?: Timestamp     // 30 or 365 days from grant
     updatedAt: Timestamp
   }
 }
 ```
 
-**Store only:** user profile, subscription status, payment metadata.  
+**Collection:** `payments/{paymentId}` (audit + idempotency — Admin write only)
+
+```typescript
+{
+  uid: string
+  orderId: string
+  plan: 'monthly' | 'yearly'
+  amount: number
+  currency: 'INR'
+  status: 'completed' | 'failed'
+  source: 'verify' | 'webhook'
+  razorpayPaymentId: string
+  razorpayOrderId: string
+  createdAt: Timestamp
+  completedAt?: Timestamp
+  failureReason?: string
+}
+```
+
+**Store in Firestore:** user profile, subscription summary, payment audit records.  
 **Never store:** questions, answers, blog posts, or CMS content in V1.
 
 ---
@@ -331,7 +351,9 @@ Implement production-grade rules in **`firestore.rules`**. These decisions overr
 - Users must **never** read or write another user's document.
 - **`plan` and `subscription` fields cannot be modified from the client** — ever.
 - Subscription and payment metadata may be **written only by trusted Cloud Functions** (Admin SDK) after successful Razorpay verification.
-- Payment metadata is **read-only from the client** (user may read their own subscription summary).
+- Payment metadata is **read-only from the client** on `users/{uid}` (user may read own subscription summary).
+- Users may **read** their own documents in `payments/{paymentId}` where `resource.data.uid == request.auth.uid`.
+- **`payments/{paymentId}` writes are Admin SDK only** — never client-writable.
 - **Deny every write by default** unless explicitly allowed.
 - Follow the **Principle of Least Privilege**.
 
@@ -365,6 +387,12 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /payments/{paymentId} {
+      allow read: if request.auth != null
+        && resource.data.uid == request.auth.uid;
+      allow create, update, delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
@@ -378,6 +406,14 @@ All privileged updates (`plan`, `subscription`, payment metadata) go through **C
 
 ## Payments: Razorpay (mandatory server verification)
 
+> **Full spec:** `docs/RAZORPAY_ARCHITECTURE.md`
+
+### V1 payment model (locked)
+
+- **One-time Razorpay Orders API only** — not Razorpay Subscriptions API in V1.
+- Monthly plan → **30 days** premium; yearly plan → **365 days** premium (`currentPeriodEnd` set server-side).
+- Repurchase when access expires (auto-expiry job optional post-V1).
+
 ### Payment flow (the only acceptable flow)
 
 ```
@@ -387,13 +423,18 @@ Google Login
   ↓
 Buy Premium (Pricing page)
   ↓
-Razorpay checkout
+createRazorpayOrder (notes: { uid, plan })
   ↓
-Firebase Cloud Function verifies signature
+Razorpay Checkout (one-time order)
   ↓
-Firestore user.plan = 'premium' + subscription metadata
+verifyRazorpayPayment
+  → HMAC verify
+  → fetch order → assert order.notes.uid === auth.uid
+  → idempotent processPremiumGrant (payments/{paymentId} transaction)
   ↓
-Premium content unlocked
+Firestore users/{uid}.plan = 'premium'
+  ↓
+Premium content unlocked (frontend reads Firestore only)
 ```
 
 ### Forbidden flow
@@ -404,17 +445,25 @@ Razorpay success callback on frontend
 localStorage.premium = true   ❌ NEVER
 ```
 
-### Cloud Functions endpoints (V1)
+### Cloud Functions endpoints (V1.1)
 
 | Function | Purpose |
 |----------|---------|
-| `createRazorpayOrder` | Create order/subscription server-side |
-| `verifyRazorpayPayment` | Verify payment signature after checkout |
-| `razorpayWebhook` | Handle subscription lifecycle events |
+| `createRazorpayOrder` | Create one-time order server-side with `notes.uid` + `notes.plan` |
+| `verifyRazorpayPayment` | HMAC verify, fetch order, uid match, idempotent grant |
+| `razorpayWebhook` | Webhook HMAC; handle `payment.captured` / `order.paid` only |
+| `processPremiumGrant` | **Internal** — Firestore transaction on `payments/{paymentId}` + `users/{uid}` |
 
+### Mandatory payment rules
+
+- Razorpay secrets via **Firebase Secret Manager** (`defineSecret`) — not unbound `process.env`.
+- **Idempotency:** same `paymentId` cannot grant premium twice (`payments/{paymentId}`).
+- **Ownership:** `order.notes.uid === request.auth.uid` before any grant.
+- **Audit:** every successful payment writes `payments/{paymentId}`.
 - Validate Razorpay signatures on the server.
-- Update Firestore **only** after verification.
+- Update Firestore **only** after verification via Admin SDK.
 - Frontend re-fetches user doc after payment — never self-grants premium.
+- Do **not** implement Razorpay Subscriptions API or `subscription.*` webhooks in V1.
 
 ---
 
@@ -634,17 +683,20 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=
 VITE_FIREBASE_APP_ID=
 VITE_GA_MEASUREMENT_ID=
 VITE_CLARITY_PROJECT_ID=
-VITE_RAZORPAY_KEY_ID=             # Public key only — test key in dev/staging
+# Razorpay public key comes from createRazorpayOrder response — no frontend secret required
 ```
 
-### Cloud Functions (Firebase secrets / config per environment)
+### Cloud Functions (Firebase Secret Manager — per environment)
 
-```
-APP_ENV=development
-RAZORPAY_KEY_ID=
-RAZORPAY_KEY_SECRET=
-RAZORPAY_WEBHOOK_SECRET=
-```
+Use **`firebase functions:secrets:set`** — never commit secrets. Bind with `defineSecret()` in Functions v2.
+
+| Secret | Purpose |
+|--------|---------|
+| `RAZORPAY_KEY_ID` | Razorpay API + returned as public checkout key |
+| `RAZORPAY_KEY_SECRET` | Order API + payment HMAC verification |
+| `RAZORPAY_WEBHOOK_SECRET` | Webhook signature verification |
+
+Do **not** use plain `process.env` for these in production without Secret Manager binding.
 
 ---
 

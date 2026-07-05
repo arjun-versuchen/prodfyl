@@ -15,6 +15,16 @@ service cloud.firestore {
             .hasAny(['plan', 'subscription']);
 
       allow delete: if false;
+
+      match /orders/{orderId} {
+        allow read, write: if false;
+      }
+    }
+
+    match /payments/{paymentId} {
+      allow read: if request.auth != null
+        && resource.data.uid == request.auth.uid;
+      allow create, update, delete: if false;
     }
 
     match /{document=**} {

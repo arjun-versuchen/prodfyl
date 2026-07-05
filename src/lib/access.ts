@@ -42,6 +42,21 @@ export function filterAccessibleQuestions(questions: SqlQuestion[], isPremium: b
 export function isSubscriptionActive(
   plan: 'free' | 'premium' | undefined,
   status: string | undefined,
+  currentPeriodEnd?: Date,
 ): boolean {
-  return plan === 'premium' && status === 'active'
+  if (plan !== 'premium' || status !== 'active') return false
+  if (currentPeriodEnd && currentPeriodEnd.getTime() < Date.now()) return false
+  return true
+}
+
+export function isSubscriptionExpired(
+  plan: 'free' | 'premium' | undefined,
+  status: string | undefined,
+  currentPeriodEnd?: Date,
+): boolean {
+  if (plan === 'premium' && status === 'expired') return true
+  if (plan === 'premium' && status === 'active' && currentPeriodEnd && currentPeriodEnd.getTime() < Date.now()) {
+    return true
+  }
+  return false
 }

@@ -1,41 +1,61 @@
 import Razorpay from 'razorpay'
+import { createHmac } from 'crypto'
+import type { BillingPlan } from './plans'
+import { getPlan } from './plans'
 
-export function getRazorpayClient(): Razorpay {
-  const keyId = process.env.RAZORPAY_KEY_ID
-  const keySecret = process.env.RAZORPAY_KEY_SECRET
-
-  if (!keyId || !keySecret) {
-    throw new Error('Razorpay credentials are not configured')
-  }
-
+export function createRazorpayClient(keyId: string, keySecret: string): Razorpay {
   return new Razorpay({ key_id: keyId, key_secret: keySecret })
 }
 
-export function getPublicKeyId(): string {
-  const keyId = process.env.RAZORPAY_KEY_ID
-  if (!keyId) throw new Error('Razorpay key ID is not configured')
-  return keyId
-}
-
-export function verifyPaymentSignature(input: {
-  orderId: string
-  paymentId: string
-  signature: string
-}): boolean {
-  const secret = process.env.RAZORPAY_KEY_SECRET
-  if (!secret) return false
-
-  const crypto = require('crypto') as typeof import('crypto')
+export function verifyPaymentSignature(
+  keySecret: string,
+  input: { orderId: string; paymentId: string; signature: string },
+): boolean {
   const payload = `${input.orderId}|${input.paymentId}`
-  const expected = crypto.createHmac('sha256', secret).update(payload).digest('hex')
+  const expected = createHmac('sha256', keySecret).update(payload).digest('hex')
   return expected === input.signature
 }
 
-export function verifyWebhookSignature(body: string, signature: string | undefined): boolean {
-  const secret = process.env.RAZORPAY_WEBHOOK_SECRET
-  if (!secret || !signature) return false
-
-  const crypto = require('crypto') as typeof import('crypto')
-  const expected = crypto.createHmac('sha256', secret).update(body).digest('hex')
+export function verifyWebhookSignature(
+  webhookSecret: string,
+  body: string,
+  signature: string | undefined,
+): boolean {
+  if (!signature) return false
+  const expected = createHmac('sha256', webhookSecret).update(body).digest('hex')
   return expected === signature
+}
+
+export async function fetchRazorpayOrder(client: Razorpay, orderId: string) {
+  return client.orders.fetch(orderId)
+}
+
+export async function fetchRazorpayPayment(client: Razorpay, paymentId: string) {
+  return client.payments.fetch(paymentId)
+}
+
+export async function fetchOrderPayments(client: Razorpay, orderId: string) {
+  return client.orders.fetchPayments(orderId)
+}
+
+export function validateOrderOwnership(input: {
+  order: { amount?: number | string; status?: string; notes?: Record<string, string> }
+  uid: string
+  plan: BillingPlan
+}): void {
+  const notes = input.order.notes ?? {}
+  const expected = getPlan(input.plan)
+
+  if (notes.uid !== input.uid) {
+    throw new Error('ORDER_UID_MISMATCH')
+  }
+  if (notes.plan !== input.plan) {
+    throw new Error('ORDER_PLAN_MISMATCH')
+  }
+  if (Number(input.order.amount) !== expected.amount) {
+    throw new Error('ORDER_AMOUNT_MISMATCH')
+  }
+  if (input.order.status !== 'paid') {
+    throw new Error('ORDER_NOT_PAID')
+  }
 }

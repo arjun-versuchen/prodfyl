@@ -11,7 +11,6 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_APP_ID: string
   readonly VITE_GA_ID: string
   readonly VITE_CLARITY_ID: string
-  readonly VITE_RAZORPAY_KEY_ID: string
 }
 
 interface ImportMeta {

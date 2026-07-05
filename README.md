@@ -1,151 +1,202 @@
-# InterviewMaster AI
+# InterviewMaster AI (ProdFyl)
 
-Premium Data Engineering interview preparation platform. **SQL is live** with 130+ curated questions. Additional learning paths (PySpark, Spark, Azure, Databricks, and more) are scaffolded as Coming Soon modules.
+Premium Data Engineering interview preparation platform. **SQL is live** with 130+ curated questions. Production: [https://prodfyl.com](https://prodfyl.com)
 
 ## Stack
 
-- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS, Framer Motion, React Router
+- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS, Framer Motion, React Router (Vercel)
 - **Auth:** Firebase Authentication (Google)
-- **Database:** Cloud Firestore (users, subscriptions, payment metadata only)
-- **Backend:** Firebase Cloud Functions (Razorpay)
+- **Database:** Cloud Firestore
+- **Backend:** Firebase Cloud Functions + Firebase Secret Manager
+- **Payments:** Razorpay Orders API (one-time orders, 30/365-day premium)
 - **Content:** TypeScript question files (not stored in Firestore)
-- **Hosting:** Vercel (frontend), Firebase (functions + Firestore rules)
 
-## Features (V1)
+## Payment architecture
 
-- Premium dark UI with design tokens
-- Modular learning path architecture (`/learn/:pathSlug/...`)
-- SQL sheets with free/premium gating
-- Google sign-in + Firestore user profiles
-- Razorpay checkout with server-side verification
-- Branded error pages, SEO, analytics hooks, security headers
+See **`docs/RAZORPAY_ARCHITECTURE.md`** for the full spec.
+
+```
+Pricing → createRazorpayOrder → Razorpay Checkout → verifyRazorpayPayment
+       → processPremiumGrant (Firestore transaction)
+       → payments/{paymentId} + users/{uid}
+       → refreshProfile → premium unlocked
+```
+
+Backup paths: **webhook** (`payment.captured`, `order.paid`) and **recoverPendingPayment** (browser closed after pay).
+
+---
 
 ## Prerequisites
 
 - Node.js 20+
-- Firebase project (dev/staging/prod recommended separately)
+- Firebase CLI (`npm i -g firebase-tools`)
+- Firebase project per environment (dev / staging / prod)
 - Razorpay account (test mode for staging)
-- Vercel account (for frontend deploy)
+- Vercel account
+
+---
 
 ## Local setup
 
-1. **Clone and install**
-
 ```bash
+git clone <repo>
 cd sql-interview-prep
 npm install
 npm install --prefix functions
-```
-
-2. **Environment variables**
-
-```bash
 cp .env.example .env.development
+# Fill VITE_FIREBASE_* values
+npm run dev
 ```
 
-Fill in Firebase and optional analytics/Razorpay public key values.
+---
 
-3. **Firebase setup**
+## Firebase Secret Manager (Razorpay)
 
-- Create a Firebase project
-- Enable **Google** sign-in in Authentication
-- Create a Firestore database
-- Deploy rules:
+Set secrets **per Firebase project** (never commit, never put in Vercel):
 
 ```bash
 firebase login
 firebase use <your-project-id>
-firebase deploy --only firestore:rules
-```
 
-4. **Cloud Functions secrets**
-
-```bash
 firebase functions:secrets:set RAZORPAY_KEY_ID
 firebase functions:secrets:set RAZORPAY_KEY_SECRET
 firebase functions:secrets:set RAZORPAY_WEBHOOK_SECRET
 ```
 
-Deploy functions:
+Functions bind secrets via `defineSecret()` in `functions/src/lib/secrets.ts`.
+
+---
+
+## Firestore deploy
 
 ```bash
+firebase deploy --only firestore:rules,firestore:indexes
+```
+
+Collections:
+
+| Collection | Purpose |
+|------------|---------|
+| `users/{uid}` | Profile + premium summary (`plan`, `subscription`) |
+| `users/{uid}/orders/{orderId}` | Pending order tracking for recovery |
+| `payments/{paymentId}` | Audit trail + idempotency |
+
+---
+
+## Cloud Functions deploy
+
+```bash
+npm run functions:build
 firebase deploy --only functions
 ```
 
-Configure Razorpay webhook URL to your deployed `razorpayWebhook` endpoint.
+Exported functions:
 
-5. **Run locally**
+| Function | Type | Purpose |
+|----------|------|---------|
+| `createRazorpayOrder` | Callable | Create Razorpay order with `notes.uid` + `notes.plan` |
+| `verifyRazorpayPayment` | Callable | HMAC verify + order ownership + grant premium |
+| `recoverPendingPayment` | Callable | Recover paid orders if verify never ran |
+| `razorpayWebhook` | HTTPS | Backup grant on `payment.captured` / `order.paid` |
 
-```bash
-npm run dev
+---
+
+## Razorpay dashboard configuration
+
+1. Use **Test Mode** keys for staging, **Live Mode** for production.
+2. Copy Key ID + Key Secret into Firebase Secret Manager (not frontend).
+3. Create a **Webhook** pointing to:
+
+```
+https://<region>-<firebase-project-id>.cloudfunctions.net/razorpayWebhook
 ```
 
-Open `http://localhost:5173`.
-
-## Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start Vite dev server |
-| `npm run build` | Type-check + production build |
-| `npm run preview` | Preview production build |
-| `npm --prefix functions run build` | Compile Cloud Functions |
-
-## Deployment
-
-### Frontend (Vercel)
-
-1. Import the repository in Vercel
-2. Set environment variables from `.env.example`
-3. Deploy — `vercel.json` applies security headers automatically
-4. Update `VITE_SITE_URL`, `public/sitemap.xml`, and `public/robots.txt` with your production domain
-
-### Firebase
+Find your exact URL after deploy:
 
 ```bash
-firebase deploy --only firestore:rules,functions
+firebase functions:list
 ```
+
+4. Enable webhook events:
+   - `payment.captured`
+   - `order.paid`
+
+5. Copy the webhook **secret** into `RAZORPAY_WEBHOOK_SECRET`.
+
+---
+
+## Vercel deployment (frontend)
+
+1. Import repo in Vercel
+2. Set all `VITE_*` variables from `.env.example`
+3. Set `VITE_SITE_URL=https://prodfyl.com` (production)
+4. Deploy — security headers from `vercel.json` include Razorpay CSP entries
+
+**No Razorpay secrets on Vercel.** Checkout receives public `keyId` from `createRazorpayOrder`.
+
+---
 
 ## Environment variables
 
-### Frontend (Vercel / `.env.*`)
+### Frontend (Vercel / `.env.development`)
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `VITE_APP_ENV` | Yes | `development`, `staging`, or `production` |
-| `VITE_SITE_URL` | Yes | Public site URL for SEO/canonical links |
-| `VITE_FIREBASE_API_KEY` | Yes | Firebase web API key |
-| `VITE_FIREBASE_AUTH_DOMAIN` | Yes | e.g. `project.firebaseapp.com` |
-| `VITE_FIREBASE_PROJECT_ID` | Yes | Firebase project ID |
-| `VITE_FIREBASE_STORAGE_BUCKET` | Yes | Firebase storage bucket |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Yes | Firebase sender ID |
-| `VITE_FIREBASE_APP_ID` | Yes | Firebase app ID |
-| `VITE_RAZORPAY_KEY_ID` | For payments | Razorpay **public** key |
-| `VITE_GA_ID` | Optional | Google Analytics measurement ID |
-| `VITE_CLARITY_ID` | Optional | Microsoft Clarity project ID |
+| `VITE_APP_ENV` | Yes | `development`, `staging`, `production` |
+| `VITE_SITE_URL` | Yes | Public URL (`https://prodfyl.com`) |
+| `VITE_FIREBASE_*` | Yes | Firebase web config (6 vars) |
+| `VITE_GA_ID` | Optional | Google Analytics |
+| `VITE_CLARITY_ID` | Optional | Microsoft Clarity |
 
-### Cloud Functions (Firebase secrets)
+### Cloud Functions (Firebase Secret Manager)
 
 | Secret | Description |
 |--------|-------------|
-| `RAZORPAY_KEY_ID` | Razorpay key ID |
-| `RAZORPAY_KEY_SECRET` | Razorpay key secret |
-| `RAZORPAY_WEBHOOK_SECRET` | Razorpay webhook signing secret |
+| `RAZORPAY_KEY_ID` | Razorpay Key ID (test or live) |
+| `RAZORPAY_KEY_SECRET` | Razorpay Key Secret |
+| `RAZORPAY_WEBHOOK_SECRET` | Webhook signing secret from Razorpay dashboard |
+
+---
+
+## Manual testing checklist
+
+- [ ] Google Sign-In works on production
+- [ ] Signed-in user opens `/pricing`
+- [ ] `createRazorpayOrder` returns order + keyId (Firebase Functions logs)
+- [ ] Razorpay Checkout opens and completes (test card in test mode)
+- [ ] `verifyRazorpayPayment` grants premium in Firestore
+- [ ] `payments/{paymentId}` document created with `status: completed`
+- [ ] `users/{uid}.plan === 'premium'` and `subscription.status === 'active'`
+- [ ] Premium SQL sheets unlock after refresh
+- [ ] Replay verify with same payment → `alreadyProcessed: true`, no duplicate grant
+- [ ] Pay → close browser → login → `recoverPendingPayment` unlocks premium
+- [ ] Webhook fires → idempotent grant (check Functions logs)
+- [ ] Payment failure routes to `/payment/failed`
+- [ ] `npm run build` and `npm run functions:build` pass
+
+### Razorpay test card (test mode)
+
+- Card: `4111 1111 1111 1111`
+- Expiry: any future date
+- CVV: any 3 digits
+
+---
 
 ## Free vs Premium
 
-**Free:** SQL Basics, first 8 questions in Joins & Aggregations sheets, search within free content, learning paths, pricing.
+**Free:** SQL Basics, first 8 Qs in Joins/Aggregations, search within free content.
 
-**Premium:** Master Sheet, company-wise questions, advanced SQL sheets, premium notes, full mixed sheets.
+**Premium:** Master Sheet, company questions, advanced SQL, premium notes (30 or 365 days).
 
-Premium is granted **only** after Cloud Function payment verification updates Firestore.
+Premium is granted **only** by Cloud Functions writing Firestore — never client-side.
 
-## Architecture notes
+---
 
-- Single source of truth for paths: `src/data/learningPaths.ts`
-- Shared module shell: `src/components/module-shell/ModuleShell.tsx`
-- Access rules: `src/lib/access.ts`
-- Master architecture doc: `docs/MASTER_PROMPT.md`
+## Architecture docs
+
+- `docs/MASTER_PROMPT.md` — platform blueprint
+- `docs/RAZORPAY_ARCHITECTURE.md` — payment spec
+- `.cursor/rules/interviewmaster.md` — Cursor rules
 
 ## License
 

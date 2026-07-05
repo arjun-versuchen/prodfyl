@@ -51,28 +51,19 @@ Framer Motion, skeleton loaders, empty states, premium lock illustrations, stick
 - Same shell for every path: `/learn/:pathSlug/...`
 - Code under **`src/modules/`** — SQL is reference implementation
 
-## Firestore security (`firestore.rules`)
+## Firestore
 
-- User reads/writes **own doc only**
-- Client may update profile fields only — **never `plan` or `subscription`**
-- Subscription/payment metadata: **read-only client, write via Functions after Razorpay verify**
-- Default deny all other access
+- `users/{uid}` — profile + subscription summary (client cannot write `plan` / `subscription`)
+- `payments/{paymentId}` — audit + idempotency (Admin write only; user read own)
 
-## Environments & logging
+## Payments (V1 — see `docs/RAZORPAY_ARCHITECTURE.md`)
 
-- `.env.example` with placeholders; `.env.development|staging|production` gitignored
-- Log: auth events, function execution, Razorpay verify, subscription updates, errors
-- Never log: secrets, tokens, payment secrets, PII payment data
-
-## Error pages (branded)
-
-404, 403, 500, Offline, Payment Failed, Subscription Expired, Coming Soon
-
-## Payment flow
-
-```
-Google Login → Buy Premium → Razorpay → Function verifies → Firestore → premium unlocked
-```
+- **One-time Razorpay Orders only** — 30-day / 365-day premium; **no** Razorpay Subscriptions API in V1
+- Secrets via **Firebase Secret Manager** (`defineSecret`) — not plain `process.env`
+- **Idempotency:** `payments/{paymentId}` transaction — same payment never grants twice
+- **Ownership:** fetch order → `order.notes.uid === request.auth.uid` before grant
+- Flow: Google Login → create order → Checkout → verify → idempotent grant → Firestore → premium unlocked
+- Never `localStorage` for premium
 
 ## V1 scope
 

@@ -1,10 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { SEO } from '../../components/SEO'
 import { GoogleSignInButton } from '../../components/auth/AuthButtons'
 import { useAuth } from '../../contexts/AuthContext'
-import { createRazorpayOrder, openRazorpayCheckout, verifyRazorpayPayment } from '../../lib/firebase/payments'
+import {
+  createRazorpayOrder,
+  openRazorpayCheckout,
+  PaymentError,
+  recoverPendingPayment,
+  verifyRazorpayPayment,
+} from '../../lib/firebase/payments'
+import { isSubscriptionExpired } from '../../lib/access'
 import { trackEvent } from '../../lib/analytics'
 import { tokens } from '../../lib/design-tokens'
 import type { BillingPlan } from '../../types'
@@ -40,19 +47,45 @@ const plans = [
 ]
 
 export default function PricingPage() {
-  const { user, isPremium, refreshProfile, isConfigured } = useAuth()
+  const { user, profile, isPremium, refreshProfile, isConfigured } = useAuth()
   const [loadingPlan, setLoadingPlan] = useState<BillingPlan | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [info, setInfo] = useState<string | null>(null)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!user || isPremium) return
+
+    void recoverPendingPayment()
+      .then(async (result) => {
+        if (result.recovered) {
+          setInfo(result.message)
+          await refreshProfile()
+        }
+      })
+      .catch(() => {
+        // Silent best-effort recovery on pricing page load.
+      })
+  }, [user, isPremium, refreshProfile])
+
+  const expired = isSubscriptionExpired(
+    profile?.plan,
+    profile?.subscription.status,
+    profile?.subscription.currentPeriodEnd,
+  )
 
   const handleSubscribe = async (plan: BillingPlan) => {
     if (!user) {
       setError('Please sign in with Google before purchasing Premium.')
       return
     }
-    if (isPremium) return
+    if (isPremium) {
+      setInfo('You already have active Premium access.')
+      return
+    }
 
     setError(null)
+    setInfo(null)
     setLoadingPlan(plan)
     trackEvent('begin_checkout', { plan })
 
@@ -62,19 +95,38 @@ export default function PricingPage() {
         order,
         userEmail: user.email ?? '',
         userName: user.displayName,
-        onDismiss: () => setLoadingPlan(null),
+        onDismiss: () => {
+          setLoadingPlan(null)
+          setInfo('Checkout closed. You can retry anytime.')
+        },
+        onFailure: (message) => {
+          setLoadingPlan(null)
+          setError(message)
+          navigate('/payment/failed')
+        },
         onSuccess: async (payload) => {
           try {
-            await verifyRazorpayPayment({
+            const result = await verifyRazorpayPayment({
               razorpayOrderId: payload.razorpay_order_id,
               razorpayPaymentId: payload.razorpay_payment_id,
               razorpaySignature: payload.razorpay_signature,
               plan,
+              device: 'web',
             })
             await refreshProfile()
             trackEvent('purchase', { plan })
+            setInfo(
+              result.alreadyProcessed
+                ? 'Premium is already active on your account.'
+                : 'Payment successful. Premium access is now active.',
+            )
             navigate('/learn/sql')
-          } catch {
+          } catch (err) {
+            setError(
+              err instanceof PaymentError
+                ? err.message
+                : 'Payment verification failed. Try again or use Recover Payment after login.',
+            )
             navigate('/payment/failed')
           } finally {
             setLoadingPlan(null)
@@ -82,8 +134,28 @@ export default function PricingPage() {
         },
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to start checkout.')
+      setError(err instanceof PaymentError ? err.message : 'Unable to start checkout.')
       setLoadingPlan(null)
+    }
+  }
+
+  const handleRecover = async () => {
+    if (!user) {
+      setError('Sign in to recover a pending payment.')
+      return
+    }
+    setError(null)
+    setInfo(null)
+    try {
+      const result = await recoverPendingPayment()
+      if (result.recovered) {
+        await refreshProfile()
+        setInfo(result.message)
+      } else {
+        setInfo(result.message)
+      }
+    } catch (err) {
+      setError(err instanceof PaymentError ? err.message : 'Unable to recover payment.')
     }
   }
 
@@ -117,14 +189,35 @@ export default function PricingPage() {
           </div>
         )}
 
+        {expired && (
+          <div className="mx-auto mt-8 max-w-xl rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3 text-center text-sm text-warning">
+            Your Premium access has expired.{' '}
+            <Link to="/subscription/expired" className="font-medium underline">
+              Renew Premium
+            </Link>
+          </div>
+        )}
+
         {isPremium && (
           <div className="mx-auto mt-8 max-w-xl rounded-2xl border border-success/30 bg-success/10 px-4 py-3 text-center text-sm text-success">
             You already have active Premium access. Enjoy the full SQL library.
           </div>
         )}
 
+        {info && (
+          <p className="mx-auto mt-6 max-w-xl text-center text-sm text-info">{info}</p>
+        )}
+
         {error && (
           <p className="mx-auto mt-6 max-w-xl text-center text-sm text-warning">{error}</p>
+        )}
+
+        {user && !isPremium && (
+          <div className="mx-auto mt-6 flex justify-center">
+            <button type="button" onClick={() => void handleRecover()} className={tokens.btnSecondary}>
+              Recover Pending Payment
+            </button>
+          </div>
         )}
 
         <div className="mt-12 grid gap-6 lg:grid-cols-2">

@@ -14,10 +14,8 @@ function parseSubscription(data: Record<string, unknown> | undefined): UserSubsc
   }
   return {
     status: (data.status as UserSubscription['status']) ?? 'none',
-    razorpaySubscriptionId: data.razorpaySubscriptionId as string | undefined,
-    razorpayPlanId: data.razorpayPlanId as string | undefined,
-    razorpayOrderId: data.razorpayOrderId as string | undefined,
     currentPeriodEnd: timestampToDate(data.currentPeriodEnd as Timestamp | undefined),
+    lastPaymentId: data.lastPaymentId as string | undefined,
     updatedAt: timestampToDate(data.updatedAt as Timestamp | undefined),
   }
 }

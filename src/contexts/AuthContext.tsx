@@ -16,6 +16,7 @@ import {
 } from 'firebase/auth'
 import { auth, isFirebaseConfigured } from '../lib/firebase/config'
 import { fetchUserProfile, upsertUserProfile } from '../lib/firebase/users'
+import { recoverPendingPayment } from '../lib/firebase/payments'
 import { isSubscriptionActive } from '../lib/access'
 import type { UserProfile } from '../types'
 
@@ -67,7 +68,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             displayName: nextUser.displayName,
             photoURL: nextUser.photoURL,
           })
-          setProfile(nextProfile)
+
+          let profileToUse = nextProfile
+
+          if (
+            profileToUse &&
+            !isSubscriptionActive(
+              profileToUse.plan,
+              profileToUse.subscription.status,
+              profileToUse.subscription.currentPeriodEnd,
+            )
+          ) {
+            try {
+              const recovery = await recoverPendingPayment()
+              if (recovery.recovered) {
+                profileToUse = await fetchUserProfile(nextUser.uid)
+              }
+            } catch {
+              // Recovery is best-effort on login; checkout can still trigger verify manually.
+            }
+          }
+
+          setProfile(profileToUse)
         } catch {
           setAuthError('Unable to sync your profile. Please try again.')
           setProfile(null)
@@ -102,7 +124,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null)
   }, [])
 
-  const isPremium = isSubscriptionActive(profile?.plan, profile?.subscription.status)
+  const isPremium = isSubscriptionActive(
+    profile?.plan,
+    profile?.subscription.status,
+    profile?.subscription.currentPeriodEnd,
+  )
 
   const value = useMemo(
     () => ({
