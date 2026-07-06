@@ -75,19 +75,22 @@ export default function Layout() {
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden border-t border-border md:hidden"
             >
-              <div className="space-y-1 px-4 py-4">
-                {nav.map((item) => (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    className="block rounded-lg px-3 py-2 text-sm text-muted hover:bg-surface hover:text-foreground"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-                <div className="pt-3">
-                  <UserMenu />
-                </div>
+              <div className="px-4 py-4">
+                <nav className="space-y-1">
+                  {nav.map((item) => (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      className="block rounded-lg px-3 py-2.5 text-sm font-medium text-muted transition hover:bg-surface hover:text-foreground"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </nav>
+
+                <div className="my-4 border-t border-border" />
+
+                <UserMenu variant="mobile" />
               </div>
             </motion.div>
           )}

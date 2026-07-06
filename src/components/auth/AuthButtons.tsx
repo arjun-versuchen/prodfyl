@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { User } from 'firebase/auth'
 import { useAuth } from '../../contexts/AuthContext'
@@ -10,9 +10,22 @@ function getUserInitial(user: User, profile: UserProfile | null): string {
   return label.charAt(0).toUpperCase()
 }
 
-function UserAvatar({ user, profile }: { user: User; profile: UserProfile | null }) {
+function getDisplayName(user: User, profile: UserProfile | null): string {
+  return profile?.displayName ?? user.displayName ?? user.email?.split('@')[0] ?? 'Account'
+}
+
+function UserAvatar({
+  user,
+  profile,
+  size = 'sm',
+}: {
+  user: User
+  profile: UserProfile | null
+  size?: 'sm' | 'md'
+}) {
   const [imageError, setImageError] = useState(false)
   const photoURL = user.photoURL?.trim() ?? ''
+  const sizeClass = size === 'md' ? 'h-10 w-10 text-sm' : 'h-8 w-8 text-xs'
 
   useEffect(() => {
     setImageError(false)
@@ -26,7 +39,7 @@ function UserAvatar({ user, profile }: { user: User; profile: UserProfile | null
         src={photoURL}
         alt=""
         referrerPolicy="no-referrer"
-        className="h-8 w-8 rounded-full border border-border object-cover"
+        className={`${sizeClass} shrink-0 rounded-full border border-border object-cover`}
         onError={() => setImageError(true)}
       />
     )
@@ -34,13 +47,26 @@ function UserAvatar({ user, profile }: { user: User; profile: UserProfile | null
 
   return (
     <div
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-gradient-to-br from-primary/30 to-accent/30 text-xs font-bold text-foreground"
+      className={`flex ${sizeClass} shrink-0 items-center justify-center rounded-full border border-border bg-gradient-to-br from-primary/30 to-accent/30 font-bold text-foreground`}
       aria-hidden="true"
     >
       {getUserInitial(user, profile)}
     </div>
   )
 }
+
+function PremiumBadge({ className = '' }: { className?: string }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border border-accent/30 bg-accent/10 px-2.5 py-1 text-xs font-medium text-accent ${className}`}
+    >
+      Premium
+    </span>
+  )
+}
+
+const upgradeCtaClass =
+  'inline-flex items-center rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary transition hover:border-primary/50 hover:bg-primary/15'
 
 export function GoogleSignInButton({ className = '' }: { className?: string }) {
   const { signInWithGoogle, loading, isConfigured, authError } = useAuth()
@@ -86,38 +112,179 @@ export function GoogleSignInButton({ className = '' }: { className?: string }) {
   )
 }
 
-export function UserMenu() {
-  const { user, profile, signOut, loading, isPremium } = useAuth()
-
-  if (loading) {
-    return <div className="skeleton h-9 w-24 rounded-lg" />
+function UserMenuSkeleton({ variant }: { variant: 'desktop' | 'mobile' }) {
+  if (variant === 'mobile') {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="skeleton h-10 w-10 rounded-full" />
+          <div className="space-y-1.5">
+            <div className="skeleton h-4 w-28 rounded" />
+            <div className="skeleton h-3 w-36 rounded" />
+          </div>
+        </div>
+      </div>
+    )
   }
 
-  if (!user) {
-    return <GoogleSignInButton />
-  }
+  return <div className="skeleton h-9 w-36 rounded-xl" />
+}
+
+function DesktopUserMenu() {
+  const { user, profile, signOut, isPremium } = useAuth()
+  const [open, setOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  if (!user) return null
+
+  const displayName = getDisplayName(user, profile)
+  const email = user.email ?? profile?.email
+
+  useEffect(() => {
+    if (!open) return
+
+    function handleClick(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpen(false)
+      }
+    }
+
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(false)
+    }
+
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [open])
 
   return (
-    <div className="flex items-center gap-3">
+    <div
+      ref={menuRef}
+      className="relative flex items-center gap-1 rounded-xl border border-border bg-surface/60 p-1 pl-2"
+    >
       {isPremium ? (
-        <span className="rounded-full border border-accent/30 bg-accent/10 px-2.5 py-1 text-xs font-medium text-accent">
-          Premium
-        </span>
+        <PremiumBadge className="mr-1" />
       ) : (
-        <Link to="/pricing" className="text-xs font-medium text-primary hover:underline">
+        <Link to="/pricing" className={`${upgradeCtaClass} mr-1`}>
           Upgrade
         </Link>
       )}
-      <div className="flex items-center gap-2">
+
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label="Account menu"
+        onClick={() => setOpen((value) => !value)}
+        className={`flex items-center gap-1.5 rounded-lg py-1 pl-1 pr-2 transition ${
+          open ? 'bg-surface' : 'hover:bg-surface'
+        }`}
+      >
         <UserAvatar user={user} profile={profile} />
-        <button
-          type="button"
-          onClick={() => void signOut()}
-          className="text-xs text-muted transition hover:text-foreground"
+        <svg
+          className={`h-3.5 w-3.5 text-muted transition ${open ? 'rotate-180' : ''}`}
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          aria-hidden="true"
         >
-          Sign out
-        </button>
-      </div>
+          <path
+            fillRule="evenodd"
+            d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+            clipRule="evenodd"
+          />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-60 overflow-hidden rounded-xl border border-border bg-card shadow-xl shadow-black/25"
+        >
+          <div className="border-b border-border px-3 py-3">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted">Signed in as</p>
+            <p className="mt-1 truncate text-sm font-semibold text-foreground">{displayName}</p>
+            {email && <p className="truncate text-xs text-muted">{email}</p>}
+          </div>
+
+          <div className="p-1">
+            {!isPremium && (
+              <Link
+                to="/pricing"
+                role="menuitem"
+                onClick={() => setOpen(false)}
+                className="flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium text-primary transition hover:bg-primary/10"
+              >
+                Upgrade
+              </Link>
+            )}
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false)
+                void signOut()
+              }}
+              className="flex w-full items-center rounded-lg px-3 py-2 text-sm text-muted transition hover:bg-surface hover:text-foreground"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
+}
+
+function MobileUserMenu() {
+  const { user, profile, signOut, isPremium } = useAuth()
+
+  if (!user) return null
+
+  const displayName = getDisplayName(user, profile)
+  const email = user.email ?? profile?.email
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <UserAvatar user={user} profile={profile} size="md" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-foreground">{displayName}</p>
+          {email && <p className="truncate text-xs text-muted">{email}</p>}
+        </div>
+        {isPremium && <PremiumBadge />}
+      </div>
+
+      {!isPremium && (
+        <Link to="/pricing" className={`${upgradeCtaClass} w-full justify-center py-2`}>
+          Upgrade to Premium
+        </Link>
+      )}
+
+      <button
+        type="button"
+        onClick={() => void signOut()}
+        className={`${tokens.btnSecondary} w-full justify-center py-2 text-sm`}
+      >
+        Sign out
+      </button>
+    </div>
+  )
+}
+
+export function UserMenu({ variant = 'desktop' }: { variant?: 'desktop' | 'mobile' }) {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return <UserMenuSkeleton variant={variant} />
+  }
+
+  if (!user) {
+    return <GoogleSignInButton className={variant === 'mobile' ? 'w-full' : ''} />
+  }
+
+  return variant === 'mobile' ? <MobileUserMenu /> : <DesktopUserMenu />
 }
