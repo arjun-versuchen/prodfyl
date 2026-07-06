@@ -12,7 +12,7 @@ export default function HomePage() {
     <>
       <SEO
         title="InterviewMaster AI"
-        description="Premium Data Engineering interview prep. SQL live with 130+ questions. PySpark, Spark, Azure, Databricks and more coming soon."
+        description="Premium Data Engineering interview prep with 530+ questions across SQL, PySpark, Spark, Azure, Python, Delta Lake, and more."
         path="/"
       />
 
@@ -41,8 +41,7 @@ export default function HomePage() {
             transition={{ delay: 0.1 }}
             className="mt-6 max-w-2xl text-lg leading-relaxed text-muted"
           >
-            Content-rich learning paths built for data engineering careers. SQL is live today with{' '}
-            {totalQuestionCount}+ curated questions. PySpark, Spark, Azure, Databricks, and more are on the way.
+            Content-rich learning paths built for data engineering careers. {totalQuestionCount}+ curated questions across SQL, PySpark, Spark, Azure, Python, Delta Lake, and data modeling.
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 12 }}

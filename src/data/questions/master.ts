@@ -1,6 +1,6 @@
 import type { SqlQuestion } from '../../types'
 
-type Q = Omit<SqlQuestion, 'id' | 'sheet' | 'category'>
+type Q = Omit<SqlQuestion, 'id' | 'sheet' | 'category' | 'module'>
 
 const sheet = 'sql-master-sheet'
 const category = 'SQL Master Sheet'
@@ -145,6 +145,7 @@ const items: Q[] = [
 export const masterQuestions: SqlQuestion[] = items.map((item, i) => ({
   ...item,
   id: 600 + i + 1,
+  module: 'sql',
   sheet,
   category,
 }))

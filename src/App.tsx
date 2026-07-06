@@ -24,9 +24,10 @@ import { initAnalytics } from './lib/analytics'
 const HomePage = lazy(() => import('./modules/marketing/HomePage'))
 const LearningPathsPage = lazy(() => import('./modules/marketing/LearningPathsPage'))
 const PricingPage = lazy(() => import('./modules/marketing/PricingPage'))
-const SqlModuleHome = lazy(() => import('./modules/sql/SqlModuleHome'))
-const SqlSheetPage = lazy(() => import('./modules/sql/SqlSheetPage'))
-const SqlQuestionPage = lazy(() => import('./modules/sql/SqlQuestionPage'))
+const ModuleIndex = lazy(() => import('./components/routing/ModuleIndex'))
+const ModuleSheetPage = lazy(() => import('./modules/learn/ModuleSheetPage'))
+const ModuleQuestionPage = lazy(() => import('./modules/learn/ModuleQuestionPage'))
+const ProjectPage = lazy(() => import('./modules/projects/ProjectPage'))
 
 function LearnPathGate({ children }: { children: React.ReactNode }) {
   const location = useLocation()
@@ -76,9 +77,10 @@ export default function App() {
                 </LearnPathGate>
               }
             >
-              <Route index element={<SqlModuleHome />} />
-              <Route path="sheet/:sheetSlug" element={<SqlSheetPage />} />
-              <Route path="question/:id" element={<SqlQuestionPage />} />
+              <Route index element={<ModuleIndex />} />
+              <Route path="sheet/:sheetSlug" element={<ModuleSheetPage />} />
+              <Route path="question/:id" element={<ModuleQuestionPage />} />
+              <Route path="project/:projectSlug" element={<ProjectPage />} />
             </Route>
 
             <Route path="sheets" element={<LegacySheetsRedirect />} />

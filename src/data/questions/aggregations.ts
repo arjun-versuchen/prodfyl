@@ -1,6 +1,6 @@
 import type { SqlQuestion } from '../../types'
 
-type Q = Omit<SqlQuestion, 'id' | 'sheet' | 'category'>
+type Q = Omit<SqlQuestion, 'id' | 'sheet' | 'category' | 'module'>
 
 const sheet = 'aggregations'
 const category = 'Aggregations & GROUP BY'
@@ -126,6 +126,7 @@ const items: Q[] = [
 export const aggregationsQuestions: SqlQuestion[] = items.map((item, i) => ({
   ...item,
   id: 200 + i + 1,
+  module: 'sql',
   sheet,
   category,
 }))
