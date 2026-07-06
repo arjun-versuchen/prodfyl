@@ -7,13 +7,18 @@ import { sheets } from '../../data/sheets'
 import { getQuestionsBySheet, totalQuestionCount } from '../../data/questions'
 import { tokens } from '../../lib/design-tokens'
 
+const HOME_DESCRIPTION =
+  'SQL, PySpark, Spark, Azure Data Factory & Databricks interview questions. Data engineering projects, mock interviews & 530+ curated Q&A.'
+
 export default function HomePage() {
   return (
     <>
       <SEO
-        title="InterviewMaster AI"
-        description="Premium Data Engineering interview prep with 530+ questions across SQL, PySpark, Spark, Azure, Python, Delta Lake, and more."
+        title="Azure Data Engineering Interview Preparation"
+        description={HOME_DESCRIPTION}
         path="/"
+        brandFirst
+        educational
       />
 
       <section className="relative overflow-hidden border-b border-border">
@@ -24,7 +29,7 @@ export default function HomePage() {
             animate={{ opacity: 1, y: 0 }}
             className="mb-4 text-sm font-medium uppercase tracking-widest text-primary"
           >
-            Premium Data Engineering Interview Platform
+            Azure Data Engineer Interview Prep
           </motion.p>
           <motion.h1
             initial={{ opacity: 0, y: 12 }}
@@ -32,8 +37,8 @@ export default function HomePage() {
             transition={{ delay: 0.05 }}
             className="max-w-4xl text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl"
           >
-            Ace your interviews with{' '}
-            <span className={tokens.gradientText}>InterviewMaster AI</span>
+            Data Engineering{' '}
+            <span className={tokens.gradientText}>Interview Preparation</span>
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 12 }}
@@ -41,7 +46,9 @@ export default function HomePage() {
             transition={{ delay: 0.1 }}
             className="mt-6 max-w-2xl text-lg leading-relaxed text-muted"
           >
-            Content-rich learning paths built for data engineering careers. {totalQuestionCount}+ curated questions across SQL, PySpark, Spark, Azure, Python, Delta Lake, and data modeling.
+            Practice {totalQuestionCount}+ curated interview questions across SQL, PySpark, Spark, Azure Data Factory,
+            Databricks, Python, and Delta Lake — plus data engineering projects and company-wise questions for your next
+            Azure data engineer role.
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 12 }}
@@ -58,7 +65,7 @@ export default function HomePage() {
             className="mt-10 flex flex-wrap gap-4"
           >
             <Link to="/learn/sql" className={tokens.btnPrimary}>
-              Start SQL Module
+              Start SQL Interview Questions
             </Link>
             <Link to="/learning-paths" className={tokens.btnSecondary}>
               Explore Learning Paths
@@ -73,8 +80,15 @@ export default function HomePage() {
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
         <div className="mb-10 flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold">Learning Paths</h2>
-            <p className="mt-2 text-muted">One platform. Every data engineering interview topic.</p>
+            <h2 className="text-2xl font-bold">Data Engineering Learning Paths</h2>
+            <p className="mt-2 text-muted">
+              SQL interview questions, PySpark, ADF, Databricks, and more — one platform for your data engineering
+              interview roadmap.{' '}
+              <Link to="/learn/projects" className="font-medium text-primary hover:underline">
+                Explore projects
+              </Link>
+              .
+            </p>
           </div>
           <Link to="/learning-paths" className="text-sm font-medium text-primary hover:underline">
             View all →
@@ -115,8 +129,11 @@ export default function HomePage() {
 
       <section className="border-t border-border bg-surface/40">
         <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
-          <h2 className="text-2xl font-bold">Popular SQL Sheets</h2>
-          <p className="mt-2 text-muted">High-density practice inspired by top interview prep platforms — with premium polish.</p>
+          <h2 className="text-2xl font-bold">Popular SQL Interview Questions</h2>
+          <p className="mt-2 text-muted">
+            High-density SQL practice sheets — from basics to window functions, with premium Master Sheet and
+            company-wise questions.
+          </p>
           <div className="mt-10 grid gap-5 sm:grid-cols-2">
             {sheets.slice(0, 4).map((sheet) => (
               <Link
@@ -141,7 +158,12 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 py-16 text-center sm:px-6">
           <h2 className="text-3xl font-bold">Ready to level up?</h2>
           <p className="mx-auto mt-4 max-w-2xl text-muted">
-            Start free with SQL Basics and sample JOINs/Aggregations. Unlock Premium for the Master Sheet, company questions, and advanced SQL.
+            Start free with SQL Basics and sample questions. Unlock Premium for the Master Sheet, company-wise
+            questions, and advanced modules. Mock interviews are on the roadmap —{' '}
+            <Link to="/learn/projects" className="font-medium text-primary hover:underline">
+              explore data engineering projects
+            </Link>{' '}
+            today.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Link to="/pricing" className={tokens.btnPrimary}>
@@ -149,6 +171,9 @@ export default function HomePage() {
             </Link>
             <Link to={`/learn/${livePaths[0]?.slug ?? 'sql'}`} className={tokens.btnSecondary}>
               Practice Free SQL
+            </Link>
+            <Link to="/learn/pyspark" className={tokens.btnSecondary}>
+              PySpark Questions
             </Link>
           </div>
         </div>

@@ -19,17 +19,17 @@ export function isQuestionModule(slug: string): slug is QuestionModuleSlug {
 
 export function getModuleTitle(slug: string): string {
   const titles: Record<string, string> = {
-    sql: 'SQL Interview Mastery',
-    pyspark: 'PySpark Interview Mastery',
-    spark: 'Apache Spark Interview Mastery',
-    'azure-data-engineering': 'Azure Data Engineering Interview Mastery',
-    'azure-data-factory': 'Azure Data Factory Interview Mastery',
-    'azure-databricks': 'Azure Databricks Interview Mastery',
-    'delta-lake': 'Delta Lake Interview Mastery',
-    python: 'Python Interview Mastery',
-    'data-modeling': 'Data Modeling Interview Mastery',
+    sql: 'SQL Interview Questions',
+    pyspark: 'PySpark Interview Questions',
+    spark: 'Apache Spark Interview Questions',
+    'azure-data-engineering': 'Azure Data Engineering Interview Questions',
+    'azure-data-factory': 'Azure Data Factory Interview Questions',
+    'azure-databricks': 'Azure Databricks Interview Questions',
+    'delta-lake': 'Delta Lake Interview Questions',
+    python: 'Python Interview Questions',
+    'data-modeling': 'Data Modeling Interview Questions',
   }
-  return titles[slug] ?? 'Interview Mastery'
+  return titles[slug] ?? 'Interview Questions'
 }
 
 export function getModuleSeoDescription(slug: string): string {

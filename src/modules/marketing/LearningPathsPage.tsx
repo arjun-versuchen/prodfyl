@@ -8,17 +8,23 @@ export default function LearningPathsPage() {
   return (
     <>
       <SEO
-        title="Learning Paths"
-        description="Explore InterviewMaster AI learning paths — SQL live now, with PySpark, Spark, Azure, Databricks, and more coming soon."
+        title="Data Engineering Learning Paths"
+        description="SQL, PySpark, Spark, Azure Data Factory, Databricks & Python interview paths — all live. Mock interviews coming soon. Start practicing today."
         path="/learning-paths"
       />
 
       <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           <p className="text-sm font-medium uppercase tracking-widest text-primary">Platform</p>
-          <h1 className="mt-3 text-4xl font-bold">Learning Paths</h1>
+          <h1 className="mt-3 text-4xl font-bold">Data Engineering Learning Paths</h1>
           <p className="mt-4 max-w-3xl text-lg text-muted">
-            InterviewMaster AI is built as a modular platform. Every path uses the same premium layout — new modules plug in without redesigning navigation.
+            Your data engineering interview roadmap in one place. SQL, PySpark, Spark, Azure Data Factory, Databricks,
+            Python, Delta Lake, and Data Modeling are live with 50+ questions each. System Design and Mock Interviews are
+            coming next.{' '}
+            <Link to="/pricing" className="font-medium text-primary hover:underline">
+              View Premium plans
+            </Link>
+            .
           </p>
         </motion.div>
 

@@ -37,7 +37,7 @@ function UserAvatar({
     return (
       <img
         src={photoURL}
-        alt=""
+        alt={profile?.displayName ?? user.displayName ?? 'User profile photo'}
         referrerPolicy="no-referrer"
         className={`${sizeClass} shrink-0 rounded-full border border-border object-cover`}
         onError={() => setImageError(true)}

@@ -116,17 +116,20 @@ export default function Layout() {
                 Learning Paths
               </Link>
               <Link to="/learn/sql" className="block hover:text-primary">
-                SQL Module
+                SQL Interview Questions
+              </Link>
+              <Link to="/learn/projects" className="block hover:text-primary">
+                Data Engineering Projects
               </Link>
               <Link to="/pricing" className="block hover:text-primary">
-                Pricing
+                Premium Pricing
               </Link>
             </div>
           </div>
           <div>
             <p className="text-sm font-semibold text-foreground">Trust</p>
             <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
-              <span className="rounded-full border border-border px-3 py-1">{totalQuestionCount}+ SQL Qs</span>
+              <span className="rounded-full border border-border px-3 py-1">{totalQuestionCount}+ Interview Qs</span>
               <span className="rounded-full border border-border px-3 py-1">Premium Dark UI</span>
               <span className="rounded-full border border-border px-3 py-1">Google Sign-In</span>
             </div>

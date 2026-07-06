@@ -1,8 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://interviewmaster.ai/</loc></url>
-  <url><loc>https://interviewmaster.ai/learning-paths</loc></url>
-  <url><loc>https://interviewmaster.ai/pricing</loc></url>
-  <url><loc>https://interviewmaster.ai/learn/sql</loc></url>
-  <url><loc>https://interviewmaster.ai/learn/projects</loc></url>
+  <url><loc>https://prodfyl.com/</loc></url>
+  <url><loc>https://prodfyl.com/learning-paths</loc></url>
+  <url><loc>https://prodfyl.com/pricing</loc></url>
+  <url><loc>https://prodfyl.com/learn/sql</loc></url>
+  <url><loc>https://prodfyl.com/learn/pyspark</loc></url>
+  <url><loc>https://prodfyl.com/learn/spark</loc></url>
+  <url><loc>https://prodfyl.com/learn/azure-data-engineering</loc></url>
+  <url><loc>https://prodfyl.com/learn/azure-data-factory</loc></url>
+  <url><loc>https://prodfyl.com/learn/azure-databricks</loc></url>
+  <url><loc>https://prodfyl.com/learn/delta-lake</loc></url>
+  <url><loc>https://prodfyl.com/learn/python</loc></url>
+  <url><loc>https://prodfyl.com/learn/data-modeling</loc></url>
+  <url><loc>https://prodfyl.com/learn/projects</loc></url>
 </urlset>

@@ -162,8 +162,8 @@ export default function PricingPage() {
   return (
     <>
       <SEO
-        title="Pricing"
-        description="InterviewMaster AI Premium — unlock Master Sheet, company questions, advanced SQL, and premium notes."
+        title="Premium Data Engineering Interview Prep"
+        description="Premium SQL interview prep with Master Sheet & company-wise questions. Advanced modules across PySpark, Azure ADF & Databricks included as they launch."
         path="/pricing"
       />
 

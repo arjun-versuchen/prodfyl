@@ -2,7 +2,7 @@ import { Helmet } from 'react-helmet-async'
 
 const SITE_NAME = 'InterviewMaster AI'
 const DEFAULT_DESCRIPTION =
-  'Premium Data Engineering interview prep platform. SQL live now — PySpark, Spark, Azure, Databricks, and more coming soon.'
+  'SQL, PySpark, Spark, Azure Data Factory & Databricks interview questions. Data engineering projects, mock interviews & 530+ curated Q&A.'
 const DEFAULT_OG_IMAGE = '/og-image.svg'
 
 interface SEOProps {
@@ -11,35 +11,82 @@ interface SEOProps {
   path?: string
   type?: 'website' | 'article'
   noIndex?: boolean
+  /** Renders title as "InterviewMaster AI | {title}" instead of "{title} | InterviewMaster AI" */
+  brandFirst?: boolean
+  /** Homepage-style schema with EducationalOrganization + optional Course */
+  educational?: boolean
 }
 
-export function SEO({ title, description = DEFAULT_DESCRIPTION, path = '', type = 'website', noIndex = false }: SEOProps) {
-  const siteUrl = import.meta.env.VITE_SITE_URL ?? 'https://interviewmaster.ai'
-  const url = `${siteUrl.replace(/\/$/, '')}${path}`
-  const fullTitle = title === SITE_NAME ? title : `${title} | ${SITE_NAME}`
+function buildTitle(title: string, brandFirst: boolean): string {
+  if (title === SITE_NAME) return title
+  return brandFirst ? `${SITE_NAME} | ${title}` : `${title} | ${SITE_NAME}`
+}
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@graph': [
-      {
-        '@type': 'WebSite',
+function buildJsonLd(siteUrl: string, description: string, educational: boolean) {
+  const graph: Record<string, unknown>[] = [
+    {
+      '@type': 'WebSite',
+      name: SITE_NAME,
+      url: siteUrl,
+      description,
+      inLanguage: 'en',
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: `${siteUrl}/learn/sql?search={search_term_string}`,
+        'query-input': 'required name=search_term_string',
+      },
+    },
+    {
+      '@type': educational ? 'EducationalOrganization' : 'Organization',
+      name: SITE_NAME,
+      url: siteUrl,
+      description,
+      ...(educational && {
+        knowsAbout: [
+          'Azure Data Engineering',
+          'SQL Interview Questions',
+          'PySpark Interview Questions',
+          'Azure Data Factory',
+          'Azure Databricks',
+          'Delta Lake',
+          'Data Engineering Projects',
+        ],
+      }),
+    },
+  ]
+
+  if (educational) {
+    graph.push({
+      '@type': 'Course',
+      name: 'Azure Data Engineering Interview Preparation',
+      description,
+      provider: {
+        '@type': 'EducationalOrganization',
         name: SITE_NAME,
         url: siteUrl,
-        description: DEFAULT_DESCRIPTION,
-        potentialAction: {
-          '@type': 'SearchAction',
-          target: `${siteUrl}/learn/sql?search={search_term_string}`,
-          'query-input': 'required name=search_term_string',
-        },
       },
-      {
-        '@type': 'Organization',
-        name: SITE_NAME,
-        url: siteUrl,
-        description: DEFAULT_DESCRIPTION,
-      },
-    ],
+      courseMode: 'online',
+      isAccessibleForFree: true,
+      teaches: 'Data Engineering Interview Preparation',
+    })
   }
+
+  return { '@context': 'https://schema.org', '@graph': graph }
+}
+
+export function SEO({
+  title,
+  description = DEFAULT_DESCRIPTION,
+  path = '',
+  type = 'website',
+  noIndex = false,
+  brandFirst = false,
+  educational = false,
+}: SEOProps) {
+  const siteUrl = import.meta.env.VITE_SITE_URL ?? 'https://prodfyl.com'
+  const url = `${siteUrl.replace(/\/$/, '')}${path}`
+  const fullTitle = buildTitle(title, brandFirst)
+  const jsonLd = buildJsonLd(siteUrl, description, educational)
 
   return (
     <Helmet>
